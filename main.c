@@ -7,7 +7,7 @@ int main(int argc, char* argv[])
 {
     if (argc < 2)
     {
-        printf("Add file to compile in parameter");
+        printf("Add file to compile in parameter\n");
         return EXIT_FAILURE;
     }
     
