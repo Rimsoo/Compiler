@@ -2,13 +2,8 @@
 #include <string.h>
 #include "buffer.h"
 #include "lexer.h"
-
-ast_t* analyse_fonction()
-{
-    ast_t* res;
-
-    return res;
-}
+#include "ast.h"
+#include "parser.h"
 
 int main(int argc, char* argv[])
 {
@@ -22,16 +17,7 @@ int main(int argc, char* argv[])
     buffer_t* buffer = (buffer_t*)malloc(sizeof(buffer_t));
     buf_init(buffer, fd);
 
-    while ( !buf_eof(buffer) )
-    {
-        if(strcmp(lexer_getalphanum(buffer), "fonction") != 0)
-            syntax_error("Function expected");
-        else
-        {
-            analyse_fonction
-        }
-    }
-    
+    parser(buffer);
 
     return EXIT_SUCCESS;
 }

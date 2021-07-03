@@ -5,8 +5,42 @@
 
 void syntax_error(char* error)
 {
-    printf("Syntax error :\n%s", error);
+    printf("Syntax error : %s\n", error);
     exit(EXIT_FAILURE);
+}
+
+char * lexer_getuntil (buffer_t * buffer, char c)
+{
+    char* res = NULL;
+    int size = 0;
+
+    buf_skipblank(buffer);
+    buf_lock(buffer);
+    while (buf_getchar(buffer) != c)
+        size++;
+
+    if(size)
+    {
+        buf_rollback(buffer, size);
+        res = (char*) malloc((size+1) * sizeof(char));
+        buf_getnchar(buffer, res, size);
+        res[size] = '\0';
+    }
+    else
+        res = "";
+
+    buf_rollback(buffer, 1);
+    buf_unlock(buffer);
+
+    return res;
+}
+
+char * lexer_getuntil_rollback (buffer_t * buffer, char c)
+{
+    char* res = lexer_getuntil(buffer, c);
+    buf_rollback(buffer, strlen(res)+1);
+
+    return res;
 }
 
 char * lexer_getalphanum (buffer_t * buffer)
@@ -37,8 +71,10 @@ char * lexer_getalphanum (buffer_t * buffer)
 
 char * lexer_getalphanum_rollback (buffer_t * buffer)
 {
+    buf_lock(buffer);
     char* res = lexer_getalphanum(buffer);
     buf_rollback(buffer, strlen(res)+1);
+    buf_unlock(buffer);
 
     return res;
 }
