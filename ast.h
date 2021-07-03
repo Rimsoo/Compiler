@@ -21,7 +21,19 @@ typedef enum
 typedef struct ast_binary_e
 {
     /* TODO */
-};
+}ast_binary_e;
+
+typedef struct symbol_t
+{
+    /* data */
+}symbol_t;
+
+
+typedef struct ast_list_t
+{
+    struct ast_t* node;
+    struct ast_t* next;
+}ast_list_t;
 
 typedef struct ast_t
 {

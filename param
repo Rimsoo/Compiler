@@ -1,2 +1,5 @@
- s4lut8Gdu 
- -95
+fonction main (entier b) : rien 
+{  
+    entier a = 1;  
+    a = 2;
+}

@@ -24,4 +24,6 @@ char * lexer_getop(buffer_t *buffer);
 bool isop (char chr);
 bool isValidOp(char* op);
 
+void syntax_error(char* error);
+
 #endif
