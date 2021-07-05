@@ -28,10 +28,39 @@ bool isValidType(char* type)
     return false;
 }
 
+ast_binary_e binaryStringToEnum(char* op)
+{
+    if(strcmp(op, "+") == 0)
+        return OP_PLUS;
+    if(strcmp(op, "-") == 0)
+        return OP_MOINS;
+    if(strcmp(op, "*") == 0)
+        return OP_FOIS;
+    if(strcmp(op, "/") == 0)
+        return OP_DIVISE;
+    if(strcmp(op, "==") == 0)
+        return OP_DOUBLE_EGALE;
+    if(strcmp(op, "!=") == 0)
+        return OP_PAS_EGALE;
+    if(strcmp(op, ">") == 0)
+        return OP_SUPPERIEUR;
+    if(strcmp(op, "<") == 0)
+        return OP_INFERIEUR;
+    if(strcmp(op, ">=") == 0)
+        return OP_SUPPERIEUR_EGALE;
+    if(strcmp(op, "<=") == 0)
+        return OP_INFERIEUR_EGALE;
+    if(strcmp(op, "ET") == 0)
+        return OP_ET;
+    if(strcmp(op, "OU") == 0)
+        return OP_OU;
+}
+
 void parser(buffer_t* buffer)
 {
     while ( !buf_eof(buffer) )
     {
+        buf_print(buffer);
         if(strcmp(lexer_getalphanum(buffer), "fonction") != 0)
             syntax_error("Function expected");
         else
@@ -49,16 +78,16 @@ ast_t* analyse_fonction(buffer_t* buffer)
 {
     symbol_t* func_table = NULL;
     char* f_name = lexer_getalphanum(buffer);
-    ast_list_t* args = analyse_parametres(buffer, func_table);
+    ast_list_t* args = analyse_parametres(buffer, &func_table);
     val_types_t reType = analyse_type_de_retour(buffer);
-    ast_list_t* stmnt = analyse_corps_de_fonction(buffer, func_table);
+    ast_list_t* stmnt = analyse_corps_de_fonction(buffer, &func_table);
     
-        buf_print(buffer);
+        
 
     return ast_new_function(f_name, reType, args, stmnt, func_table);
 }
 
-ast_list_t* analyse_parametres(buffer_t* buffer, symbol_t* func_table)
+ast_list_t* analyse_parametres(buffer_t* buffer, symbol_t** func_table)
 {
     ast_list_t* args = NULL;
     buf_skipblank(buffer);
@@ -79,10 +108,10 @@ ast_list_t* analyse_parametres(buffer_t* buffer, symbol_t* func_table)
         
         char* nom = lexer_getalphanum(buffer);
 
-        if (sym_search(func_table, nom))
+        if (sym_search(*func_table, nom))
             syntax_error("Duplicate parametre name !");
 
-        sym_add(&func_table, sym_new(nom, stringToType(type), ast_new_variable(nom, stringToType(type)))),
+        sym_add(func_table, sym_new(nom, stringToType(type), ast_new_variable(nom, stringToType(type)))),
         ast_list_add(&args, ast_new_variable(nom, stringToType(type)));
                 
         nextChar = buf_getchar_after_blank(buffer);
@@ -104,7 +133,7 @@ val_types_t analyse_type_de_retour(buffer_t* buffer)
     return stringToType(type);
 }
 
-ast_list_t* analyse_corps_de_fonction(buffer_t* buffer, symbol_t* func_table)
+ast_list_t* analyse_corps_de_fonction(buffer_t* buffer, symbol_t** func_table)
 {
     buf_skipblank(buffer);
     lexer_assert_openbracket(buffer, "Expected '{' after function signature !\n");
@@ -113,14 +142,27 @@ ast_list_t* analyse_corps_de_fonction(buffer_t* buffer, symbol_t* func_table)
     while (true)
     {
         char* next = lexer_getalphanum(buffer);
-        if (strcmp(next, "entier") == 0)
+        if (isValidType(next))
         {
-            char* nextInstru = lexer_getuntil(buffer, ';');
-            printf(COLOR_RED "Get Until : %s\n" COLOR_DEFAULT, nextInstru);
+            char* varName = lexer_getalphanum(buffer);
+            if(sym_search(*func_table, varName))
+                syntax_error("Variable already exist");
+
+            ast_t* newVar = ast_new_variable(varName, stringToType(next));
+            ast_list_add(&res, newVar);
+            sym_add(func_table, sym_new(varName, SYM_VARIABLE, newVar));
+
+            char endOrAssing = buf_getchar_after_blank(buffer);
+            if (endOrAssing == '=')
+            {
+                lexer_getuntil(buffer, ';');
+                // TODO
+            }
+
         }
         else if (strcmp(next, "si") == 0)
         {
-            ast_list_add(&res, analyse_condition(buffer, func_table));
+            ast_list_add(&res, analyse_condition(buffer, *func_table));
         }
         else if (strcmp(next, "tanque") == 0)
         {
@@ -141,54 +183,109 @@ ast_t* analyse_condition(buffer_t *buffer, symbol_t* func_table)
     buf_skipblank(buffer);
     lexer_assert_openbrace (buffer, "Expected '(' after 'si' key !\n");
 
-    return ast_new_condition(analyse_condition_critere(buffer, func_table), NULL, NULL);
+    return ast_new_condition(analyse_expression_booleene(buffer, func_table), NULL, NULL);
     
 }
 
-ast_t* analyse_condition_critere(buffer_t* buffer, symbol_t* func_table)
+ast_t* analyse_expression_booleene(buffer_t* buffer, symbol_t* func_table)
 {
-    ast_t* binary = NULL;
-
-    /* code */
-
-    char nextChar = buf_getchar_after_blank(buffer);
-    if (nextChar == '(')
-        binary->binary.left = analyse_condition_critere(buffer, func_table); 
-        
-    if(nextChar == ')')
-        return binary;
-    
-}
-
-ast_t* analyse_expression(buffer_t* buffer, symbol_t* func_table)
-{
-    bool braceOpen = false;
-    char c = buf_getchar_rollback(buffer);
+    bool expEnd = true;
     ast_list_t* stack = NULL;
-    ast_t* res = NULL;
+    ast_list_add(&stack, NULL);
 
-    if(c == '(')
-        ast_list_add(&stack, analyse_expression(buffer, func_table));
-    if(c == ')')
-        return res;
-    else if (c == '-' || isdigit(c))
+    while(expEnd)
     {
-        ast_list_add(&stack, ast_new_integer(lexer_getnumber(buffer)));
-    }
-    else
+        char c = buf_getchar_rollback(buffer);
+
+        if(c == '(')
+        {
+            buf_forward(buffer, 1);
+            ast_list_add(&stack, analyse_expression_booleene(buffer, func_table));
+        }
+        else if(c == ')' || c == ';')
+            expEnd = false;
+        else if (c == '-' || isdigit(c))
+        {
+            ast_list_add(&stack, ast_new_integer(lexer_getnumber(buffer)));
+        }
+        else if (isop(c))
+        {
+            ast_list_add(&stack, ast_new_binary(binaryStringToEnum(lexer_getop(buffer)), NULL, NULL));
+        }
+        else
+        {
+            char* next = lexer_getalphanum(buffer);
+            symbol_t* found;
+
+            if( (found = sym_search(func_table, next)) )
+                ast_list_add(&stack, found->attributes);
+
+            else if ( (found = sym_search(global_table, next)))         
+                ast_list_add(&stack, analyse_appel_fonction(buffer, func_table, found));
+                        
+            else
+                syntax_error("Unknow variable");
+            
+        }
+    }  
+    
+    return  list_to_tree(translate_to_list(stack));
+}
+
+ast_t* analyse_appel_fonction(buffer_t *buffer, symbol_t* func_table, symbol_t* called_func)
+{
+    lexer_assert_openbrace(buffer, "Expected open brace after function call !");
+    ast_list_t* arg_list = NULL;
+    ast_list_t* args_count = called_func->attributes->function.params;
+
+    while (args_count)
     {
         char* next = lexer_getalphanum(buffer);
+        symbol_t* found;
 
+        if(isnumber(next))
+            ast_list_add(&arg_list, ast_new_integer(strtol(next, NULL, 10)));
+
+        else if( (found = sym_search(func_table, next)) )
+            ast_list_add(&arg_list, found->attributes);
+
+        else if ( (found = sym_search(global_table, next)))         
+            ast_list_add(&arg_list, analyse_appel_fonction(buffer, func_table, found));
+                    
+        else
+            syntax_error("Unknow variable");
+
+        args_count = args_count->next;
+        if(args_count)
+            lexer_assert_simplechar(buffer, ',', "Wrong parameter separator !");
     }
+
+    lexer_assert_closebrace(buffer, "Expected close brace after function call !");
+
+    return ast_new_fncall(called_func->name, arg_list);
+}
+
+ast_t* list_to_tree(ast_list_t* p)
+{
+    if (!p)
+        return NULL;
+    ast_list_t* n = ast_list_pop(&p);
+    if ( p && p->value->type == AST_BINARY)
+    {        
+        p->value->binary.right = list_to_tree(p);
+        p->value->binary.left = list_to_tree(p);
+    }
+    
+    return n->value;
 }
 
 ast_list_t* translate_to_list(ast_list_t* chaine)
 {
     ast_list_t* pile = NULL;
     ast_list_t* sortie = NULL;
-    
+    ast_list_add(&sortie, NULL);
     ast_list_add(&pile, NULL);
-    while (1)
+    while (true)
     {
         if (chaine->value == NULL && pile->value == NULL)
             return sortie;
@@ -224,15 +321,15 @@ int priority(ast_t* c1, ast_t* c2)
         return 1;
 
     //On gère le cas du + et -
-    if(c1->type == AST_BINARY && (c1->binary.op == OP_PLUS || c1->binary.op == OP_MOIN)){
-        if(c2->type = AST_INTEGER || c2->type == AST_BINARY && c2->binary.op == OP_FOIS) 
+    if(c1->type == AST_BINARY && (c1->binary.op == OP_PLUS || c1->binary.op == OP_MOINS)){
+        if(c2 != NULL && (c2->type == AST_INTEGER || c2->type == AST_BINARY && c2->binary.op == OP_FOIS)) 
             return -1;
         
         return 1;
     }
     //on gère le cas du *
     if(c1->type == AST_BINARY && c1->binary.op == OP_FOIS){
-        if(c2->type = AST_INTEGER ) 
+        if(c2 != NULL && c2->type == AST_INTEGER ) 
             return -1;
         
         return 1;

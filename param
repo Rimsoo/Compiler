@@ -9,7 +9,7 @@ fonction main () : rien {
     entier b;  
     a = 1;  
     
-    si ( 1 + a < 2 ET (a * 2 != 5 OU addition(a, 5) != 0)) {
+    si ( 1 + a < 2 ET (a * 2 != 5 OU addition(a, addition(b,5)) != 0)) {
         b = a * 2;  
     }  
     sinon si (a > 2) {

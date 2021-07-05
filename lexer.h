@@ -24,6 +24,7 @@ void lexer_assert_blank (buffer_t *buffer, char *msg);
 // operators
 char * lexer_getop(buffer_t *buffer);
 bool isop (char chr);
+bool isnumber(char* s);
 bool isValidOp(char* op);
 
 void syntax_error(char* error);

@@ -30,8 +30,7 @@ ast_list_t *ast_list_pop(ast_list_t **list)
     ast_list_t *res = *list;
 
     *list = (*list)->next;
-    res->next = NULL;
-    *list = res;
+    res->next = NULL; 
 
     return res;
 }
@@ -91,6 +90,17 @@ ast_t *ast_new_integer(long val)
     res->type = AST_INTEGER;
 
     res->integer = val;
+    
+    return res;
+}
+
+ast_t *ast_new_fncall(char *name, ast_list_t *args)
+{
+    ast_t* res = (ast_t*)malloc(sizeof(ast_t));
+    res->type = AST_FNCALL;
+
+    res->call.name = name;
+    res->call.args = args;
     
     return res;
 }

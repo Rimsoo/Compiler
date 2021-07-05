@@ -23,7 +23,7 @@ typedef enum ast_node_type_e
 typedef enum ast_binary_e
 {
     OP_PLUS,
-    OP_MOIN,
+    OP_MOINS,
     OP_FOIS,
     OP_DIVISE,
     OP_DOUBLE_EGALE,

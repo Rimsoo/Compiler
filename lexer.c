@@ -217,5 +217,18 @@ bool isValidOp(char* op)
 bool isop (char chr)
 {
     return chr == '=' || chr == '<' || chr == '>' || chr == ':' ||  chr == '+'
-        || chr == '-' || chr == '*' || chr == '!' || chr == '/' ; 
+        || chr == '-' || chr == '*' || chr == '!' || chr == '/' 
+        || chr == 'E' || chr == 'O' || chr == 'T' || chr == 'U';  
+}
+
+bool isnumber(char* s)
+{
+    int i = 0;
+    if(strlen(s) > 1 && s[0] != '-')    i++;
+    
+    for (i = i; i < strlen(s); i++)
+        if (!isdigit(s[i]))
+            return false;  
+    
+    return true;
 }
