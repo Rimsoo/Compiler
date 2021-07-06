@@ -22,6 +22,7 @@ void sym_delete(symbol_t *sym)
     // }
 
     free(sym);
+    sym = NULL;
     
 }
 

@@ -16,7 +16,9 @@ fonction main () : rien {
         b = 2;  
     }  
     sinon
+    {   
         a = 3;  
+    }
     
     tantque (a < 100) {
         a = a + addition(a, b);  

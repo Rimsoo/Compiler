@@ -71,6 +71,8 @@ void parser(buffer_t* buffer)
             sym_add(&global_table, sym_new(func->function.name, SYM_FUNCTION, func));
         }
     }   
+
+    printf(COLOR_GREEN"Code compiled succesfully !\n");
 }
 
 ast_t* analyse_fonction(buffer_t* buffer)
@@ -141,7 +143,7 @@ ast_list_t* analyse_corps_de_fonction(buffer_t* buffer, symbol_t** func_table)
     while (true)
     {
         char* next = lexer_getalphanum(buffer);
-        buf_print(buffer);
+        
         if (isValidType(next))
         {
             char* varName = lexer_getalphanum(buffer);
@@ -161,9 +163,12 @@ ast_list_t* analyse_corps_de_fonction(buffer_t* buffer, symbol_t** func_table)
         {
             ast_list_add(&res, analyse_condition(buffer, *func_table));
         }
-        else if (strcmp(next, "tanque") == 0)
+        else if (strcmp(next, "tantque") == 0)
         {
             /* TODO */
+            lexer_getuntil(buffer, ';'); 
+            buf_forward(buffer, 1);
+            buf_getchar_after_blank(buffer);
         }
         else if (strcmp(next, "retourner") == 0)
             ast_list_add(&res, ast_new_return(analyse_expression(buffer, *func_table)));
@@ -183,9 +188,10 @@ ast_list_t* analyse_corps_de_fonction(buffer_t* buffer, symbol_t** func_table)
             ast_t* newAssing = ast_new_assignment(sym_search(*func_table, next)->attributes, rvalue);
             ast_list_add(&res, newAssing);
         }
+        else if (strcmp(next, "sinon") == 0); // managed in analyse_condition
         else
             syntax_error("Unknow symbol name !");
-        
+
         if (buf_getchar_rollback(buffer) == '}')
         {
             buf_forward(buffer, 1);
@@ -197,11 +203,27 @@ ast_list_t* analyse_corps_de_fonction(buffer_t* buffer, symbol_t** func_table)
 
 ast_t* analyse_condition(buffer_t *buffer, symbol_t* func_table)
 {
-    
     buf_skipblank(buffer);
     lexer_assert_openbrace (buffer, "Expected '(' after 'si' key !\n");
+    ast_t* condition = analyse_expression(buffer, func_table);
+    ast_t* valid = ast_new_comp_stmt(analyse_corps_de_condition(buffer, &func_table));
+    ast_t* invalid = NULL;
 
-    return ast_new_condition(analyse_expression(buffer, func_table), NULL, NULL);
+    char* next = lexer_getalphanum_rollback(buffer);
+    if(strcmp(next, "sinon") == 0)
+    {
+        lexer_getalphanum(buffer);
+        char* getSi = lexer_getalphanum_rollback(buffer);
+        if(strcmp(getSi, "si") == 0)
+        {
+            lexer_getalphanum(buffer);
+            invalid = analyse_condition(buffer, func_table);
+        }
+        else
+            invalid = ast_new_comp_stmt(analyse_corps_de_condition(buffer, &func_table));
+    }
+
+    return ast_new_condition(condition, valid, invalid);
 }
 
 ast_t* analyse_expression(buffer_t* buffer, symbol_t* func_table)
@@ -254,7 +276,7 @@ ast_t* analyse_expression(buffer_t* buffer, symbol_t* func_table)
 
 ast_t* analyse_appel_fonction(buffer_t *buffer, symbol_t* func_table, symbol_t* called_func)
 {
-    lexer_assert_openbrace(buffer, "Expected open brace after function call !");
+    lexer_assert_openbrace(buffer, "Expected open brace !");
     ast_list_t* arg_list = NULL;
     ast_list_t* args_count = called_func->attributes->function.params;
 
@@ -280,12 +302,28 @@ ast_t* analyse_appel_fonction(buffer_t *buffer, symbol_t* func_table, symbol_t* 
             lexer_assert_simplechar(buffer, ',', "Wrong parameter separator !");
     }
 
-    lexer_assert_closebrace(buffer, "Expected close brace after function call !");
+    lexer_assert_closebrace(buffer, "Expected close brace !");
 
     return ast_new_fncall(called_func->name, arg_list);
 }
 
-ast_t* list_to_tree(ast_list_t* p)
+ast_list_t* analyse_corps_de_condition(buffer_t* buffer, symbol_t** func_table)
+{
+    symbol_t* func_table_tmp = *func_table;
+
+    ast_list_t* res = analyse_corps_de_fonction(buffer, func_table);
+
+    while( *func_table != func_table_tmp)
+    {
+        symbol_t *tmp_next = (*func_table)->next;
+        sym_remove( func_table, *func_table);
+        *func_table = tmp_next;
+    }
+
+    return res;
+}
+
+ast_t* list_to_tree(ast_list_t* p) // TO FIX
 {
     if (!p)
         return NULL;

@@ -133,6 +133,16 @@ ast_t *ast_new_return(ast_t *expr)
     res->type = AST_RETURN;
 
     res->ret.expr = expr;
+    
+    return res;
+}
+
+ast_t *ast_new_comp_stmt(ast_list_t *stmts)
+{
+    ast_t* res = (ast_t*)malloc(sizeof(ast_t));
+    res->type = AST_COMPOUND_STATEMENT;
+
+    res->compound_stmt.stmts = stmts;
 }
 
 void free_ast_list(ast_list_t* liste)

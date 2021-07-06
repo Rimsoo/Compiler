@@ -47,9 +47,10 @@ char * lexer_getalphanum (buffer_t * buffer)
 {
     char* res = NULL;
     int size = 0;
-
+    bool wasLocked = buffer->islocked;
     buf_skipblank(buffer);
-    buf_lock(buffer);
+    if (!wasLocked) 
+        buf_lock(buffer);
     while (isalnum(buf_getchar(buffer)))
         size++;
 
@@ -64,13 +65,15 @@ char * lexer_getalphanum (buffer_t * buffer)
         res = "";
 
     buf_rollback(buffer, 1);
-    buf_unlock(buffer);
+    if (!wasLocked)
+        buf_unlock(buffer);
 
     return res;
 }
 
 char * lexer_getalphanum_rollback (buffer_t * buffer)
-{
+{    
+    buf_skipblank(buffer);
     buf_lock(buffer);
     char* res = lexer_getalphanum(buffer);
     buf_rollback(buffer, strlen(res)+1);
