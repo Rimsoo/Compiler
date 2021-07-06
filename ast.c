@@ -105,6 +105,36 @@ ast_t *ast_new_fncall(char *name, ast_list_t *args)
     return res;
 }
 
+ast_t *ast_new_assignment(ast_t *lvalue, ast_t *rvalue)
+{
+    ast_t* res = (ast_t*)malloc(sizeof(ast_t));
+    res->type = AST_ASSIGNMENT;
+
+    res->assignment.lvalue = lvalue;
+    res->assignment.rvalue = rvalue;
+    
+    return res;
+}
+
+ast_t *ast_new_declaration(ast_t *lvalue, ast_t *rvalue)
+{
+    ast_t* res = (ast_t*)malloc(sizeof(ast_t));
+    res->type = AST_DECLARATION;
+
+    res->assignment.lvalue = lvalue;
+    res->assignment.rvalue = rvalue;
+    
+    return res;
+}
+
+ast_t *ast_new_return(ast_t *expr)
+{
+    ast_t* res = (ast_t*)malloc(sizeof(ast_t));
+    res->type = AST_RETURN;
+
+    res->ret.expr = expr;
+}
+
 void free_ast_list(ast_list_t* liste)
 {
     if(liste != NULL){

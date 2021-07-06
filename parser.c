@@ -60,7 +60,6 @@ void parser(buffer_t* buffer)
 {
     while ( !buf_eof(buffer) )
     {
-        buf_print(buffer);
         if(strcmp(lexer_getalphanum(buffer), "fonction") != 0)
             syntax_error("Function expected");
         else
@@ -142,23 +141,21 @@ ast_list_t* analyse_corps_de_fonction(buffer_t* buffer, symbol_t** func_table)
     while (true)
     {
         char* next = lexer_getalphanum(buffer);
+        buf_print(buffer);
         if (isValidType(next))
         {
             char* varName = lexer_getalphanum(buffer);
             if(sym_search(*func_table, varName))
                 syntax_error("Variable already exist");
 
-            ast_t* newVar = ast_new_variable(varName, stringToType(next));
-            ast_list_add(&res, newVar);
-            sym_add(func_table, sym_new(varName, SYM_VARIABLE, newVar));
-
             char endOrAssing = buf_getchar_after_blank(buffer);
+            ast_t* rvalue = NULL;
             if (endOrAssing == '=')
-            {
-                lexer_getuntil(buffer, ';');
-                // TODO
-            }
-
+                rvalue = analyse_expression(buffer, *func_table);
+            
+            ast_t* newVar = ast_new_declaration(ast_new_variable(varName, stringToType(next)), rvalue);
+            ast_list_add(&res, newVar);
+            sym_add(func_table, sym_new(varName, SYM_VARIABLE, newVar->declaration.lvalue));
         }
         else if (strcmp(next, "si") == 0)
         {
@@ -166,13 +163,34 @@ ast_list_t* analyse_corps_de_fonction(buffer_t* buffer, symbol_t** func_table)
         }
         else if (strcmp(next, "tanque") == 0)
         {
-            /* code */
+            /* TODO */
         }
+        else if (strcmp(next, "retourner") == 0)
+            ast_list_add(&res, ast_new_return(analyse_expression(buffer, *func_table)));
+
         else if (strcmp(next, "function") == 0)
             syntax_error("Not function allowed in function !");
         
-        if (buf_getchar(buffer) == '}')
-            return res;        
+        else if(sym_search(*func_table, next)) // assignation
+        {
+            char endOrAssing = buf_getchar_after_blank(buffer);
+            ast_t* rvalue = NULL;
+            if (endOrAssing != '=')
+                syntax_error("Symbol '=' needed for assignment !");
+            
+            rvalue = analyse_expression(buffer, *func_table);
+            
+            ast_t* newAssing = ast_new_assignment(sym_search(*func_table, next)->attributes, rvalue);
+            ast_list_add(&res, newAssing);
+        }
+        else
+            syntax_error("Unknow symbol name !");
+        
+        if (buf_getchar_rollback(buffer) == '}')
+        {
+            buf_forward(buffer, 1);
+            return res;
+        }            
     }
     
 }
@@ -183,11 +201,10 @@ ast_t* analyse_condition(buffer_t *buffer, symbol_t* func_table)
     buf_skipblank(buffer);
     lexer_assert_openbrace (buffer, "Expected '(' after 'si' key !\n");
 
-    return ast_new_condition(analyse_expression_booleene(buffer, func_table), NULL, NULL);
-    
+    return ast_new_condition(analyse_expression(buffer, func_table), NULL, NULL);
 }
 
-ast_t* analyse_expression_booleene(buffer_t* buffer, symbol_t* func_table)
+ast_t* analyse_expression(buffer_t* buffer, symbol_t* func_table)
 {
     bool expEnd = true;
     ast_list_t* stack = NULL;
@@ -200,10 +217,13 @@ ast_t* analyse_expression_booleene(buffer_t* buffer, symbol_t* func_table)
         if(c == '(')
         {
             buf_forward(buffer, 1);
-            ast_list_add(&stack, analyse_expression_booleene(buffer, func_table));
+            ast_list_add(&stack, analyse_expression(buffer, func_table));
         }
         else if(c == ')' || c == ';')
+        {
+            buf_forward(buffer, 1);
             expEnd = false;
+        }    
         else if (c == '-' || isdigit(c))
         {
             ast_list_add(&stack, ast_new_integer(lexer_getnumber(buffer)));
@@ -270,7 +290,7 @@ ast_t* list_to_tree(ast_list_t* p)
     if (!p)
         return NULL;
     ast_list_t* n = ast_list_pop(&p);
-    if ( p && p->value->type == AST_BINARY)
+    if ( p && p->value && p->value->type == AST_BINARY)
     {        
         p->value->binary.right = list_to_tree(p);
         p->value->binary.left = list_to_tree(p);
