@@ -58,6 +58,7 @@ ast_binary_e binaryStringToEnum(char* op)
 
 void parser(buffer_t* buffer)
 {
+    ast_list_t* ast = NULL;
     while ( !buf_eof(buffer) )
     {
         if(strcmp(lexer_getalphanum(buffer), "fonction") != 0)
@@ -65,13 +66,12 @@ void parser(buffer_t* buffer)
         else
         {
             ast_t * func = analyse_fonction(buffer);
-            if(sym_search(global_table, func->function.name))
-                syntax_error("Duplicate function name !");
-            
             sym_add(&global_table, sym_new(func->function.name, SYM_FUNCTION, func));
+            ast_list_add(&ast, func);
         }
     }   
 
+    writer(ast);
     printf(COLOR_GREEN"Code compiled succesfully !\n");
 }
 
@@ -79,12 +79,13 @@ ast_t* analyse_fonction(buffer_t* buffer)
 {
     symbol_t* func_table = NULL;
     char* f_name = lexer_getalphanum(buffer);
+    if(sym_search(global_table, f_name))
+        syntax_error("Duplicate function name !");
+            
     ast_list_t* args = analyse_parametres(buffer, &func_table);
     val_types_t reType = analyse_type_de_retour(buffer);
     ast_list_t* stmnt = analyse_corps_de_fonction(buffer, &func_table);
     
-        
-
     return ast_new_function(f_name, reType, args, stmnt, func_table);
 }
 
@@ -229,8 +230,9 @@ ast_t* analyse_condition(buffer_t *buffer, symbol_t* func_table)
 ast_t* analyse_expression(buffer_t* buffer, symbol_t* func_table)
 {
     bool expEnd = true;
-    ast_list_t* stack = NULL;
-    ast_list_add(&stack, NULL);
+    ast_list_t* result_stack = NULL;
+    ast_list_t* operator_stack = NULL;
+    ast_list_add(&operator_stack, NULL);
 
     while(expEnd)
     {
@@ -239,39 +241,52 @@ ast_t* analyse_expression(buffer_t* buffer, symbol_t* func_table)
         if(c == '(')
         {
             buf_forward(buffer, 1);
-            ast_list_add(&stack, analyse_expression(buffer, func_table));
+            ast_list_add(&result_stack, ast_new_unary(OP_PARENTHESES, analyse_expression(buffer, func_table)));
         }
         else if(c == ')' || c == ';')
         {
             buf_forward(buffer, 1);
+            while (operator_stack->value)
+                ast_list_add(&result_stack, ast_list_pop(&operator_stack)->value);
+            
             expEnd = false;
         }    
         else if (c == '-' || isdigit(c))
-        {
-            ast_list_add(&stack, ast_new_integer(lexer_getnumber(buffer)));
-        }
+            ast_list_add(&result_stack, ast_new_integer(lexer_getnumber(buffer)));
+        
         else if (isop(c))
         {
-            ast_list_add(&stack, ast_new_binary(binaryStringToEnum(lexer_getop(buffer)), NULL, NULL));
+            ast_t* nextOp = ast_new_binary(binaryStringToEnum(lexer_getop(buffer)), NULL, NULL);
+            if (priority(operator_stack->value, nextOp) == -1)
+            {
+                ast_list_add(&operator_stack, nextOp);
+            }
+            else
+            {
+                do
+                {
+                    ast_list_add(&result_stack, ast_list_pop(&operator_stack)->value);
+                } while (priority(operator_stack->value, nextOp) != -1);          
+            }
         }
+        
         else
         {
             char* next = lexer_getalphanum(buffer);
             symbol_t* found;
 
             if( (found = sym_search(func_table, next)) )
-                ast_list_add(&stack, found->attributes);
+                ast_list_add(&result_stack, found->attributes);
 
             else if ( (found = sym_search(global_table, next)))         
-                ast_list_add(&stack, analyse_appel_fonction(buffer, func_table, found));
+                ast_list_add(&result_stack, analyse_appel_fonction(buffer, func_table, found));
                         
             else
                 syntax_error("Unknow variable");
-            
         }
     }  
     
-    return  list_to_tree(translate_to_list(stack));
+    return polonaise_to_tree(result_stack);
 }
 
 ast_t* analyse_appel_fonction(buffer_t *buffer, symbol_t* func_table, symbol_t* called_func)
@@ -323,74 +338,72 @@ ast_list_t* analyse_corps_de_condition(buffer_t* buffer, symbol_t** func_table)
     return res;
 }
 
-ast_t* list_to_tree(ast_list_t* p) // TO FIX
+ast_t* polonaise_to_tree(ast_list_t* p) // TO FIX
 {
     if (!p)
         return NULL;
-    ast_list_t* n = ast_list_pop(&p);
-    if ( p && p->value && p->value->type == AST_BINARY)
-    {        
-        p->value->binary.right = list_to_tree(p);
-        p->value->binary.left = list_to_tree(p);
+    ast_t* tmp = NULL;
+    ast_t* curr = ast_list_pop(&p)->value;
+    if (curr->type == AST_UNARY)
+    {
+        tmp = curr->unary.operand;
+        free(curr); 
+        curr = tmp;
+    }
+    if (curr->type == AST_BINARY)
+    {     
+        if(curr->binary.right == NULL)   
+            curr->binary.right = polonaise_to_tree(p);
+        if(curr->binary.left == NULL)
+           curr->binary.left = polonaise_to_tree(p);
     }
     
-    return n->value;
-}
-
-ast_list_t* translate_to_list(ast_list_t* chaine)
-{
-    ast_list_t* pile = NULL;
-    ast_list_t* sortie = NULL;
-    ast_list_add(&sortie, NULL);
-    ast_list_add(&pile, NULL);
-    while (true)
-    {
-        if (chaine->value == NULL && pile->value == NULL)
-            return sortie;
-        else
-        {
-            ast_t* a = pile->value; 
-            ast_t* b = chaine->value; 
-            
-            if (priority(a, b) == -1)
-            {
-                ast_list_add(&pile, b);
-                chaine = chaine->next;
-            }
-            else
-            {
-                do
-                {
-                    ast_list_add(&sortie, ast_list_pop(&pile)->value);
-                } while (priority(pile->value, sortie->value) != -1);
-            }
-        }
-    }
-    free_ast_list(pile);
+    return curr;
 }
 
 int priority(ast_t* c1, ast_t* c2)
 {
-    // on gère le cas du \0
+    // on gère le cas du NULL
     if(c1 == NULL)
         return -1;
-    //on gère le cas d'un entier 
-    if(c1->type == AST_INTEGER || c1->type == AST_VARIABLE)
+    if(c2 == NULL)
+        return 1;
+    //on gère le cas d'un entier, var ou func
+    if(c1->type == AST_INTEGER || c1->type == AST_VARIABLE || c1->type == AST_FNCALL)
         return 1;
 
     //On gère le cas du + et -
     if(c1->type == AST_BINARY && (c1->binary.op == OP_PLUS || c1->binary.op == OP_MOINS)){
-        if(c2 != NULL && (c2->type == AST_INTEGER || c2->type == AST_BINARY && c2->binary.op == OP_FOIS)) 
+        if((c2->type == AST_INTEGER  || c2->type == AST_VARIABLE || c2->type == AST_FNCALL
+        || c2->type == AST_BINARY && (c2->binary.op == OP_FOIS || c2->binary.op == OP_DIVISE))) 
             return -1;
         
         return 1;
     }
-    //on gère le cas du *
-    if(c1->type == AST_BINARY && c1->binary.op == OP_FOIS){
-        if(c2 != NULL && c2->type == AST_INTEGER ) 
+    //on gère le cas du * et /
+    if(c1->type == AST_BINARY && (c1->binary.op == OP_FOIS || c1->binary.op == OP_DIVISE)){
+        if(c2->type == AST_INTEGER || c2->type == AST_VARIABLE || c2->type == AST_FNCALL ) 
             return -1;
         
         return 1;
     }
-}
+    //on gère le cas du <, <=, > et => 
+    if(c1->type == AST_BINARY && 
+        ( c1->binary.op == OP_INFERIEUR  || c1->binary.op == OP_INFERIEUR_EGALE
+        ||c1->binary.op == OP_SUPPERIEUR || c1->binary.op == OP_SUPPERIEUR_EGALE)){
+        if(c2->type == AST_BINARY && (c2->binary.op == OP_ET || c2->binary.op == OP_OU)) 
+            return 1;
+        
+        return -1;
+    }
+    // ET OU
+    if(c1->type == AST_BINARY && c1->binary.op == OP_ET)
+    {
+        if(c2->type == AST_BINARY && c2->binary.op == OP_OU)
+            return 1;
 
+        return -1;
+    }
+    if(c1->type == AST_BINARY && c1->binary.op == OP_OU)
+        return -1;
+}

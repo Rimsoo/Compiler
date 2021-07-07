@@ -145,10 +145,52 @@ ast_t *ast_new_comp_stmt(ast_list_t *stmts)
     res->compound_stmt.stmts = stmts;
 }
 
+ast_t *ast_new_unary(ast_binary_e op, ast_t *operand)
+{
+    ast_t* res = (ast_t*)malloc(sizeof(ast_t));
+    res->type = AST_UNARY;
+
+    res->unary.op = op;
+    res->unary.operand = operand;
+
+    return res;
+}
+
 void free_ast_list(ast_list_t* liste)
 {
     if(liste != NULL){
         free_ast_list(liste->next);
         free(liste);
     }
+}
+
+void list_print(ast_list_t* liste)
+{
+    if (!liste || !liste->value)
+    {
+        printf(" X\n");
+        return;
+    }   
+    
+    switch (liste->value->type)
+    {
+    case AST_VARIABLE:
+        printf(" %s ->", liste->value->var.name);
+        break;
+    
+    case AST_INTEGER:
+        printf(" %ld ->", liste->value->integer);
+        break;
+
+    case AST_FNCALL:
+        printf(" %s ->", liste->value->call.name);
+        break;
+
+    case AST_BINARY:
+        printf(" [%d] ->", liste->value->binary.op);
+        break;
+    default:
+        break;
+    }
+    list_print(liste->next);
 }

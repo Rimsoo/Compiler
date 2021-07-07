@@ -33,7 +33,8 @@ typedef enum ast_binary_e
     OP_SUPPERIEUR_EGALE,
     OP_INFERIEUR_EGALE,
     OP_ET,
-    OP_OU
+    OP_OU,
+    OP_PARENTHESES
 }ast_binary_e;
 
 typedef struct ast_list_t
@@ -118,6 +119,7 @@ typedef struct ast_t
 ast_t *ast_new_integer(long val);
 ast_t *ast_new_variable(char *name, val_types_t type);
 ast_t *ast_new_binary(ast_binary_e op, ast_t *left, ast_t *right);
+ast_t *ast_new_unary(ast_binary_e op, ast_t *operand);
 ast_t *ast_new_function(char *name, val_types_t return_type, ast_list_t *params, ast_list_t *stmts, struct symbol_t* func_table);
 ast_t *ast_new_fncall(char *name, ast_list_t *args);
 ast_t *ast_new_comp_stmt(ast_list_t *stmts);
@@ -130,5 +132,6 @@ ast_list_t *ast_list_new_node(ast_t *elem);
 ast_list_t *ast_list_add(ast_list_t **list, ast_t *elem);
 ast_list_t *ast_list_pop(ast_list_t **list);
 void free_ast_list(ast_list_t* liste);
+void list_print(ast_list_t* liste);
 
 #endif
