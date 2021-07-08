@@ -695,9 +695,10 @@ char* write_condition(ast_t* branch)
     fullSize += strlen(mapper("si"))+1;
 
     writer = (char *)malloc(fullSize * sizeof(char));
-    strcat(strcat(strcat(strcat(strcat(strcat(writer, mapper("si")), "("), write_expression(branch->branch.condition)), ")"),
-           write_block_content(branch->branch.valid->compound_stmt.stmts)),
-           "");
+    strcat(strcat(strcat(strcat(strcat(writer, mapper("si")), "("), write_expression(branch->branch.condition)), ")"),
+                  write_block_content(branch->branch.valid->compound_stmt.stmts));
+    // if (branch->branch.invalid)
+    //     strcat(strcat(writer, "sinon "), write_block_content(branch->branch.invalid->compound_stmt.stmts));
 
     return writer;
 }
