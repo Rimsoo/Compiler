@@ -18,6 +18,17 @@ int priority(ast_t* c1, ast_t* c2);
 
 bool isValidType(char* type);
 val_types_t stringToType(char* type);
+char *typeToString(val_types_t type);
+char *binaryEnumToString(ast_binary_e op);
 
+// write to language
+char *mapper(char *key);
+void writer(ast_list_t* ast);
+char* write_function(ast_t* fn);
+char* write_block_content(ast_list_t *content);
+char* write_declaration(ast_t* lvalue, ast_t* rvalue); 
+char* write_expression(ast_t* exp);
+char *write_assignment(ast_t *lvalue, ast_t *rvalue);
+char *write_condition(ast_t *branch);
 
 #endif
