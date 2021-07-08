@@ -19,6 +19,18 @@ val_types_t stringToType(char* type)
     return RIEN;
 }
 
+char* typeToString(val_types_t type)
+{
+    switch (type)
+    {
+    case ENTIER:
+        return "entier";
+    
+    case RIEN: default:
+        return "rien";
+    }
+}
+
 bool isValidType(char* type)
 {
     if(strcmp(type, "entier") == 0
@@ -28,7 +40,38 @@ bool isValidType(char* type)
     return false;
 }
 
-ast_binary_e binaryStringToEnum(char* op)
+char *binaryEnumToString(ast_binary_e op)
+{
+    switch (op)
+    {
+        case OP_PLUS:
+			return " + ";
+        case OP_MOINS:
+            return " - ";
+        case OP_FOIS:
+            return " * ";
+        case OP_DIVISE:
+            return " / ";
+        case OP_DOUBLE_EGALE:
+            return " == ";
+        case OP_PAS_EGALE:
+            return " != ";
+        case OP_SUPPERIEUR:
+            return " > ";
+        case OP_INFERIEUR:
+            return " < ";
+        case OP_SUPPERIEUR_EGALE:
+            return " >= ";
+        case OP_INFERIEUR_EGALE:
+            return " <= ";
+        case OP_ET:
+			return " && ";
+        case OP_OU:
+            return " || ";
+    }
+}
+
+ast_binary_e binaryStringToEnum(char *op)
 {
     if(strcmp(op, "+") == 0)
         return OP_PLUS;
