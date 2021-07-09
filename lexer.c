@@ -224,7 +224,7 @@ bool isop (char chr)
         || chr == 'E' || chr == 'O' || chr == 'T' || chr == 'U';  
 }
 
-bool isnumber(char* s)
+bool isNumber(char* s)
 {
     int i = 0;
     if(strlen(s) > 1 && s[0] != '-')    i++;

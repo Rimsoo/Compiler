@@ -66,7 +66,7 @@ char *binaryEnumToString(ast_binary_e op)
             return " <= ";
         case OP_ET:
 			return " && ";
-        case OP_OU:
+        case OP_OU: default:
             return " || ";
     }
 }
@@ -156,7 +156,7 @@ ast_list_t* analyse_parametres(buffer_t* buffer, symbol_t** func_table)
         if (sym_search(*func_table, nom))
             syntax_error("Duplicate parametre name !");
 
-        sym_add(func_table, sym_new(nom, stringToType(type), ast_new_variable(nom, stringToType(type)))),
+        sym_add(func_table, sym_new(nom, SYM_VARIABLE, ast_new_variable(nom, stringToType(type)))),
         ast_list_add(&args, ast_new_variable(nom, stringToType(type)));
                 
         nextChar = buf_getchar_after_blank(buffer);
@@ -343,7 +343,7 @@ ast_t* analyse_appel_fonction(buffer_t *buffer, symbol_t* func_table, symbol_t* 
         char* next = lexer_getalphanum(buffer);
         symbol_t* found;
 
-        if(isnumber(next))
+        if(isNumber(next))
             ast_list_add(&arg_list, ast_new_integer(strtol(next, NULL, 10)));
 
         else if( (found = sym_search(func_table, next)) )

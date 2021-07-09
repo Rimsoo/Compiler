@@ -143,6 +143,7 @@ ast_t *ast_new_comp_stmt(ast_list_t *stmts)
     res->type = AST_COMPOUND_STATEMENT;
 
     res->compound_stmt.stmts = stmts;
+    return res;
 }
 
 ast_t *ast_new_unary(ast_binary_e op, ast_t *operand)
