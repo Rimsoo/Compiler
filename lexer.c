@@ -179,7 +179,8 @@ char * lexer_getop(buffer_t *buffer)
     if( isop(tmp) )
     {
         buf_forward(buffer, 1);
-        char o[]= {c, tmp};
+        char o[]= {c, tmp, '\0'};
+
         if(!isValidOp(o))
             syntax_error("Invalid Operator");
 
