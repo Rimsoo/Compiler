@@ -5,18 +5,18 @@
 
 void syntax_error(char* error)
 {
-    printf("Syntax error :\n%s", error);
+    printf("Syntax error : %s\n", error);
     exit(EXIT_FAILURE);
 }
 
-char * lexer_getalphanum (buffer_t * buffer)
+char * lexer_getuntil (buffer_t * buffer, char c)
 {
     char* res = NULL;
     int size = 0;
 
     buf_skipblank(buffer);
     buf_lock(buffer);
-    while (isalnum(buf_getchar(buffer)))
+    while (buf_getchar(buffer) != c)
         size++;
 
     if(size)
@@ -35,10 +35,49 @@ char * lexer_getalphanum (buffer_t * buffer)
     return res;
 }
 
-char * lexer_getalphanum_rollback (buffer_t * buffer)
+char * lexer_getuntil_rollback (buffer_t * buffer, char c)
 {
+    char* res = lexer_getuntil(buffer, c);
+    buf_rollback(buffer, strlen(res)+1);
+
+    return res;
+}
+
+char * lexer_getalphanum (buffer_t * buffer)
+{
+    char* res = NULL;
+    int size = 0;
+    bool wasLocked = buffer->islocked;
+    buf_skipblank(buffer);
+    if (!wasLocked) 
+        buf_lock(buffer);
+    while (isalnum(buf_getchar(buffer)))
+        size++;
+
+    if(size)
+    {
+        buf_rollback(buffer, size);
+        res = (char*) malloc((size+1) * sizeof(char));
+        buf_getnchar(buffer, res, size);
+        res[size] = '\0';
+    }
+    else
+        res = "";
+
+    buf_rollback(buffer, 1);
+    if (!wasLocked)
+        buf_unlock(buffer);
+
+    return res;
+}
+
+char * lexer_getalphanum_rollback (buffer_t * buffer)
+{    
+    buf_skipblank(buffer);
+    buf_lock(buffer);
     char* res = lexer_getalphanum(buffer);
     buf_rollback(buffer, strlen(res)+1);
+    buf_unlock(buffer);
 
     return res;
 }
@@ -181,5 +220,18 @@ bool isValidOp(char* op)
 bool isop (char chr)
 {
     return chr == '=' || chr == '<' || chr == '>' || chr == ':' ||  chr == '+'
-        || chr == '-' || chr == '*' || chr == '!' || chr == '/' ; 
+        || chr == '-' || chr == '*' || chr == '!' || chr == '/' 
+        || chr == 'E' || chr == 'O' || chr == 'T' || chr == 'U';  
+}
+
+bool isnumber(char* s)
+{
+    int i = 0;
+    if(strlen(s) > 1 && s[0] != '-')    i++;
+    
+    for (i = i; i < strlen(s); i++)
+        if (!isdigit(s[i]))
+            return false;  
+    
+    return true;
 }

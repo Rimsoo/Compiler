@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include "buffer.h"
 
+char * lexer_getuntil (buffer_t * buffer, char c);
+char * lexer_getuntil_rollback (buffer_t * buffer, char c);
 char * lexer_getalphanum (buffer_t * buffer);
 char * lexer_getalphanum_rollback (buffer_t * buffer);
 long lexer_getnumber (buffer_t * buffer);
@@ -22,6 +24,9 @@ void lexer_assert_blank (buffer_t *buffer, char *msg);
 // operators
 char * lexer_getop(buffer_t *buffer);
 bool isop (char chr);
+bool isnumber(char* s);
 bool isValidOp(char* op);
+
+void syntax_error(char* error);
 
 #endif

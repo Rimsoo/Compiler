@@ -5,7 +5,7 @@
 
 #define LEXEM_SIZE 60
 #define BUF_SIZE 1024
-#define ISBLANK(chr) ((chr) == ' ' || (chr) == '\n' || (chr) == '\t')
+#define ISBLANK(chr) ((chr) == ' ' || (chr) == '\n' || (chr) == '\t' || (chr) == '\r')
 
 typedef struct buffer_t {
   char content[BUF_SIZE];

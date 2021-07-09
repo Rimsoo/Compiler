@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "lexer.h": "c",
+        "stdlib.h": "c",
+        "parser.h": "c",
+        "buffer.h": "c"
+    }
+}

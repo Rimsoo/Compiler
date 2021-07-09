@@ -1,2 +1,26 @@
- s4lut8Gdu 
- -95
+
+fonction addition (entier tmp1, entier tmp2) : entier
+{
+    retourner tmp1 + tmp2;
+}
+
+fonction main () : rien {  
+    entier a = 0;  
+    entier b = addition( 1, 2);  
+    a = 1;  
+    
+    si ( 1 + a < 2 ET (a * 2 != 5 OU addition(a, addition(b,5)) != 0)) {
+        b = a * 2;  
+    }  
+    sinon si (a > 2) {
+        b = 2;  
+    }  
+    sinon
+    {   
+        a = 3;  
+    }
+    
+    tantque (a < 100) {
+        a = a + addition(a, b);  
+    }
+}
