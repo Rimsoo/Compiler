@@ -329,7 +329,7 @@ ast_t* analyse_expression(buffer_t* buffer, symbol_t* func_table)
         }
     }  
     
-    return polonaise_to_tree(result_stack);
+    return polonaise_to_tree(&result_stack);
 }
 
 ast_t* analyse_appel_fonction(buffer_t *buffer, symbol_t* func_table, symbol_t* called_func)
@@ -381,12 +381,12 @@ ast_list_t* analyse_corps_de_condition(buffer_t* buffer, symbol_t** func_table)
     return res;
 }
 
-ast_t* polonaise_to_tree(ast_list_t* p) // TO FIX
+ast_t* polonaise_to_tree(ast_list_t** p) // TO FIX
 {
-    if (!p)
+    if (!*p)
         return NULL;
     ast_t* tmp = NULL;
-    ast_t* curr = ast_list_pop(&p)->value;
+    ast_t* curr = ast_list_pop(p)->value;
     if (curr->type == AST_UNARY)
     {
         tmp = curr->unary.operand;
@@ -517,8 +517,8 @@ char *mapper(char *key)
 
 void writer(ast_list_t* ast)
 {
-    FILE *fp = fopen("main.in", "w+");
-    char *writestr = (char *)malloc(sizeof(char));
+    FILE *fp = fopen("main.in.c", "w+");
+    char *writestr = (char *)malloc(475*sizeof(char));
 
     ast = reverseList(ast);
     while(ast)
@@ -526,7 +526,6 @@ void writer(ast_list_t* ast)
         strcat(writestr, write_function(ast->value));
         ast = ast->next;
     }
-    
     // If file opened successfully, then write the string to file
     if ( fp )
     {
@@ -556,7 +555,7 @@ char* write_function(ast_t* fn)
             param_size++;
     }
     bool first = true;
-    char *params = (char *)malloc(param_size * sizeof(char));
+    char *params = (char *)malloc(475 * sizeof(char));
     tmp = param_list;
     while (tmp)
     {
@@ -574,7 +573,7 @@ char* write_function(ast_t* fn)
     }
     int signsize = strlen(mapper(typeToString(fn->function.return_type))) +
                    1 + strlen(fn->function.name) + param_size;
-    writer = (char *)malloc((1 + strlen(fn->function.name)) * sizeof(char));
+    writer = (char *)malloc(475 * sizeof(char));
     strcat(strcat(strcat(strcpy(writer, mapper(typeToString(fn->function.return_type))), " "),
                   fn->function.name),
            (param_size != 3) ? params : "()");
@@ -585,7 +584,7 @@ char* write_function(ast_t* fn)
 char *write_block_content(ast_list_t *content)
 {
     content = reverseList(content);
-    char *writer = (char *)malloc(3*sizeof(char));
+    char *writer = (char *)malloc(475*sizeof(char));
     writer[0] = '\n';
     writer[1] = '{';
     writer[2] = '\0';
@@ -594,7 +593,7 @@ char *write_block_content(ast_list_t *content)
     ast_list_t *tmp = content;
     while (tmp)
     {
-        char *res = NULL; 
+        char *res = (char *)malloc(475*sizeof(char));
         switch (tmp->value->type)
         {
             case AST_FNCALL:
@@ -613,14 +612,15 @@ char *write_block_content(ast_list_t *content)
                 break;
             case AST_COMPOUND_STATEMENT:
 				break;
-            case AST_RETURN:
-				break;
+            case AST_RETURN:;
+                res = strcat(strcat(strcat(res, "return "), write_expression(tmp->value->ret.expr)), ";");
+                break;
             default : 
                 break;
         }
         if(res)
         {
-            writer = (char *)realloc(writer, (strlen(writer) + strlen(res) + 1) * sizeof(char));
+            writer = (char *)realloc(writer, 475* sizeof(char));
 
             strcat(writer, "\n");
             strcat(writer, res);
@@ -630,7 +630,7 @@ char *write_block_content(ast_list_t *content)
             full_size++;
     }
     // bool first = true;
-    // char *params = (char *)malloc(full_size * sizeof(char));
+    // char *params = (char *)malloc(475 * sizeof(char));
     // tmp = content;
     // while (tmp)
     // {
@@ -664,9 +664,10 @@ char *write_declaration(ast_t *lvalue, ast_t *rvalue)
 
     fullSize += strlen(mapper(typeToString(lvalue->var.type))) + strlen(lvalue->var.name);
 
-    writer = (char*)malloc(fullSize*sizeof(char));
-    strcat(strcat(strcat(writer, mapper(typeToString(lvalue->var.type))), " ")
-            , write_assignment(lvalue, rvalue));
+    writer = (char*)malloc(475*sizeof(char));
+    strcat(writer, mapper(typeToString(lvalue->var.type)));
+    strcat(writer, " ");
+    strcat(writer, write_assignment(lvalue, rvalue));
 
     return writer;
 }
@@ -681,7 +682,7 @@ char *write_assignment(ast_t *lvalue, ast_t *rvalue)
         exp = write_expression(rvalue);
     fullSize += strlen(exp);
 
-    writer = (char *)malloc(fullSize * sizeof(char));
+    writer = (char *)malloc(475 * sizeof(char));
     strcat(strcat(strcat(strcat(writer, lvalue->var.name), (rvalue) ? " = " : ""), exp), ";");
 
     return writer;
@@ -694,11 +695,19 @@ char* write_condition(ast_t* branch)
 
     fullSize += strlen(mapper("si"))+1;
 
-    writer = (char *)malloc(fullSize * sizeof(char));
-    strcat(strcat(strcat(strcat(strcat(writer, mapper("si")), "("), write_expression(branch->branch.condition)), ")"),
-                  write_block_content(branch->branch.valid->compound_stmt.stmts));
-    // if (branch->branch.invalid)
-    //     strcat(strcat(writer, "sinon "), write_block_content(branch->branch.invalid->compound_stmt.stmts));
+    writer = (char *)malloc(475 * sizeof(char));
+    char *block = write_block_content(branch->branch.valid->compound_stmt.stmts);
+    strcat(writer, mapper("si"));
+    strcat(writer, "(");
+    strcat(writer, write_expression(branch->branch.condition));
+    strcat(writer, ")");
+    strcat(writer, block);
+    if (branch->branch.invalid)
+    {
+        // char *sinon = write_condition(branch->branch.invalid);
+        // strcat(writer, "sinon ");
+        // strcat(writer, sinon);
+    }
 
     return writer;
 }
@@ -709,25 +718,25 @@ char *write_expression(ast_t *exp)
     switch (exp->type)
     {
     case AST_INTEGER:
-        str = (char *)malloc(12 * sizeof(char));
+        str = (char *)malloc(475 * sizeof(char));
         sprintf(str, "%ld", exp->integer);
         return str;
     case AST_VARIABLE:
         str = (char *)malloc((strlen(exp->var.name)+1) * sizeof(char));
         return strcat(str, exp->var.name);
     case AST_BINARY:
-        str = (char *)malloc(2 * sizeof(char));
+        str = (char *)malloc(475 * sizeof(char));
         return  strcat(strcat(strcat(str, write_expression(exp->binary.left)),
                 binaryEnumToString(exp->binary.op)),
                 write_expression(exp->binary.right));
     case AST_UNARY:
-        str = (char *)malloc(12 * sizeof(char));
+        str = (char *)malloc(475 * sizeof(char));
         return strcat(strcat(strcat(str, "("),
                     write_expression(exp->unary.operand)),
                     ")");
     case AST_FNCALL:;
         ast_list_t *tmp = reverseList(exp->call.args);
-        char *params = (char *)malloc(2*sizeof(char));
+        char *params = (char *)malloc(475*sizeof(char));
 
         while (tmp)
         {
@@ -745,7 +754,7 @@ char *write_expression(ast_t *exp)
         strcat(strcat(str, exp->call.name),params);
         return str;
     case AST_RETURN:
-        str = (char *)malloc(12 * sizeof(char));
+        str = (char *)malloc(475 * sizeof(char));
         return strcat(strcat(str, "return "),
                     write_expression(exp->ret.expr));
     default:

@@ -13,7 +13,7 @@ ast_t* analyse_condition(buffer_t *buffer, symbol_t* func_table);
 ast_t* analyse_expression(buffer_t* buffer, symbol_t* func_table);
 ast_t* analyse_appel_fonction(buffer_t* buffer, symbol_t* func_table, symbol_t* called_func);
 ast_list_t* analyse_corps_de_condition(buffer_t* buffer, symbol_t** func_table);
-ast_t* polonaise_to_tree(ast_list_t* p);
+ast_t* polonaise_to_tree(ast_list_t** p);
 int priority(ast_t* c1, ast_t* c2);
 
 bool isValidType(char* type);
